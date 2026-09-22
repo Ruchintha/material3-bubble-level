@@ -20,7 +20,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # Grant executable permission to gradlew on the Linux runner
+      # Automatically generates valid gradlew wrapper files on the runner
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper
+
       - name: Make gradlew executable
         run: chmod +x gradlew
 
