@@ -25,9 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -54,7 +52,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
         setContent {
-            Material3Theme {
+            PurpleMaterial3Theme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -362,10 +360,25 @@ fun MetricCard(label: String, value: Float, modifier: Modifier = Modifier) {
     }
 }
 
+// Material 3 Purple Theme Palette
 @Composable
-fun Material3Theme(content: @Composable () -> Unit) {
+fun PurpleMaterial3Theme(content: @Composable () -> Unit) {
+    val purpleColorScheme = lightColorScheme(
+        primary = Color(0xFF6750A4),            // M3 Deep Violet/Purple (Level state)
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFEADDFF),   // Soft Lavender container
+        onPrimaryContainer = Color(0xFF21005D),
+        tertiary = Color(0xFF7D5260),           // Soft Muted Plum (Unlevel state)
+        surface = Color(0xFFFEF7FF),            // Light Purple tinted background
+        onSurface = Color(0xFF1D1B20),
+        surfaceContainerLow = Color(0xFFF7F2FA),
+        surfaceContainerHigh = Color(0xFFECE6F0),
+        surfaceContainerHighest = Color(0xFFE6E0E9),
+        onSurfaceVariant = Color(0xFF49454F)
+    )
+
     MaterialTheme(
-        colorScheme = lightColorScheme(),
+        colorScheme = purpleColorScheme,
         content = content
     )
 }
