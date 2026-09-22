@@ -25,7 +25,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +71,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                     pitchState.value = 0f
                                     rollState.value = 0f
                                 }) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Calibrate")
+                                    Icon(Icons.Default.Refresh, contentDescription = "Reset")
                                 }
                             }
                         )
@@ -117,29 +119,37 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 @Composable
 fun LevelScreen(pitch: Float, roll: Float, modifier: Modifier = Modifier) {
     val isLevel = abs(pitch) < 0.5f && abs(roll) < 0.5f
+    val isHorizontalLevel = abs(roll) < 0.5f
+    val isVerticalLevel = abs(pitch) < 0.5f
 
-    // Dynamic Material 3 Expressive Color System
-    val bubbleColor by animateColorAsState(
+    val mainAccent by animateColorAsState(
         targetValue = if (isLevel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
-        animationSpec = tween(300), label = "BubbleColor"
+        animationSpec = tween(300), label = "MainAccent"
     )
-    val ringColor by animateColorAsState(
-        targetValue = if (isLevel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        animationSpec = tween(300), label = "RingColor"
+
+    val horizAccent by animateColorAsState(
+        targetValue = if (isHorizontalLevel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+        animationSpec = tween(300), label = "HorizAccent"
     )
+
+    val vertAccent by animateColorAsState(
+        targetValue = if (isVerticalLevel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
+        animationSpec = tween(300), label = "VertAccent"
+    )
+
+    val containerBg = MaterialTheme.colorScheme.surfaceContainerHigh
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Material 3 Status Badge
+        // Status Badge
         Surface(
             shape = CircleShape,
             color = if (isLevel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
-            modifier = Modifier.padding(top = 8.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -163,71 +173,158 @@ fun LevelScreen(pitch: Float, roll: Float, modifier: Modifier = Modifier) {
             }
         }
 
-        // Main Circular Material Level Indicator
-        Box(
-            modifier = Modifier
-                .size(280.dp)
-                .clip(CircleShape)
-                .background(ringColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val center = Offset(size.width / 2, size.height / 2)
-                val outerRadius = size.width / 2 - 16.dp.toPx()
-                val targetRadius = outerRadius * 0.35f
+        // Horizontal Tubular Level (Top Bar)
+        HorizontalTubularLevel(
+            roll = roll,
+            color = horizAccent,
+            backgroundColor = containerBg
+        )
 
-                // Outer Guideline Circle
-                drawCircle(
-                    color = bubbleColor.copy(alpha = 0.2f),
-                    radius = outerRadius,
-                    center = center,
-                    style = Stroke(width = 3.dp.toPx())
-                )
-
-                // Inner Target Zone
-                drawCircle(
-                    color = bubbleColor.copy(alpha = 0.1f),
-                    radius = targetRadius,
-                    center = center
-                )
-
-                // Offset Calculation
-                val maxOffset = outerRadius - 32.dp.toPx()
-                val rawOffsetX = (-roll / 45f) * maxOffset
-                val rawOffsetY = (pitch / 45f) * maxOffset
-
-                val currentDistance = sqrt(rawOffsetX * rawOffsetX + rawOffsetY * rawOffsetY)
-                val clampedDistance = currentDistance.coerceAtMost(maxOffset)
-
-                val angle = atan2(rawOffsetY, rawOffsetX)
-                val bubbleX = center.x + (clampedDistance * cos(angle))
-                val bubbleY = center.y + (clampedDistance * sin(angle))
-
-                // Floating Material Bubble
-                drawCircle(
-                    color = bubbleColor,
-                    radius = 28.dp.toPx(),
-                    center = Offset(bubbleX, bubbleY)
-                )
-            }
-        }
-
-        // M3 Elevation Metric Cards
+        // Middle Section: Vertical Level (Left) + Surface Level (Right)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .weight(1f),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Vertical Tubular Level
+            VerticalTubularLevel(
+                pitch = pitch,
+                color = vertAccent,
+                backgroundColor = containerBg
+            )
+
+            // Circular Surface Level
+            Box(
+                modifier = Modifier
+                    .size(240.dp)
+                    .clip(CircleShape)
+                    .background(containerBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val center = Offset(size.width / 2, size.height / 2)
+                    val outerRadius = size.width / 2 - 16.dp.toPx()
+                    val targetRadius = outerRadius * 0.35f
+
+                    drawCircle(
+                        color = mainAccent.copy(alpha = 0.2f),
+                        radius = outerRadius,
+                        center = center,
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+
+                    drawCircle(
+                        color = mainAccent.copy(alpha = 0.1f),
+                        radius = targetRadius,
+                        center = center
+                    )
+
+                    val maxOffset = outerRadius - 28.dp.toPx()
+                    val rawOffsetX = (-roll / 45f) * maxOffset
+                    val rawOffsetY = (pitch / 45f) * maxOffset
+
+                    val currentDistance = sqrt(rawOffsetX * rawOffsetX + rawOffsetY * rawOffsetY)
+                    val clampedDistance = currentDistance.coerceAtMost(maxOffset)
+
+                    val angle = atan2(rawOffsetY, rawOffsetX)
+                    val bubbleX = center.x + (clampedDistance * cos(angle))
+                    val bubbleY = center.y + (clampedDistance * sin(angle))
+
+                    drawCircle(
+                        color = mainAccent,
+                        radius = 24.dp.toPx(),
+                        center = Offset(bubbleX, bubbleY)
+                    )
+                }
+            }
+        }
+
+        // Bottom Metrics Readout
+        Row(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            MetricCard(
-                label = "PITCH",
-                value = pitch,
-                modifier = Modifier.weight(1f)
+            MetricCard(label = "ROLL (HORIZ)", value = roll, modifier = Modifier.weight(1f))
+            MetricCard(label = "PITCH (VERT)", value = pitch, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun HorizontalTubularLevel(roll: Float, color: Color, backgroundColor: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(backgroundColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2, size.height / 2)
+            val maxOffset = (size.width / 2) - 28.dp.toPx()
+            val bubbleOffsetX = ((-roll / 45f) * maxOffset).coerceIn(-maxOffset, maxOffset)
+
+            // Target notch marks
+            drawLine(
+                color = color.copy(alpha = 0.4f),
+                start = Offset(center.x - 20.dp.toPx(), 0f),
+                end = Offset(center.x - 20.dp.toPx(), size.height),
+                strokeWidth = 2.dp.toPx()
             )
-            MetricCard(
-                label = "ROLL",
-                value = roll,
-                modifier = Modifier.weight(1f)
+            drawLine(
+                color = color.copy(alpha = 0.4f),
+                start = Offset(center.x + 20.dp.toPx(), 0f),
+                end = Offset(center.x + 20.dp.toPx(), size.height),
+                strokeWidth = 2.dp.toPx()
+            )
+
+            // Bubble
+            drawCircle(
+                color = color,
+                radius = 16.dp.toPx(),
+                center = Offset(center.x + bubbleOffsetX, center.y)
+            )
+        }
+    }
+}
+
+@Composable
+fun VerticalTubularLevel(pitch: Float, color: Color, backgroundColor: Color) {
+    Box(
+        modifier = Modifier
+            .width(44.dp)
+            .height(200.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(backgroundColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.width / 2, size.height / 2)
+            val maxOffset = (size.height / 2) - 28.dp.toPx()
+            val bubbleOffsetY = ((pitch / 45f) * maxOffset).coerceIn(-maxOffset, maxOffset)
+
+            // Target notch marks
+            drawLine(
+                color = color.copy(alpha = 0.4f),
+                start = Offset(0f, center.y - 20.dp.toPx()),
+                end = Offset(size.width, center.y - 20.dp.toPx()),
+                strokeWidth = 2.dp.toPx()
+            )
+            drawLine(
+                color = color.copy(alpha = 0.4f),
+                start = Offset(0f, center.y + 20.dp.toPx()),
+                end = Offset(size.width, center.y + 20.dp.toPx()),
+                strokeWidth = 2.dp.toPx()
+            )
+
+            // Bubble
+            drawCircle(
+                color = color,
+                radius = 16.dp.toPx(),
+                center = Offset(center.x, center.y + bubbleOffsetY)
             )
         }
     }
@@ -237,7 +334,7 @@ fun LevelScreen(pitch: Float, roll: Float, modifier: Modifier = Modifier) {
 fun MetricCard(label: String, value: Float, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -245,7 +342,7 @@ fun MetricCard(label: String, value: Float, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -257,7 +354,7 @@ fun MetricCard(label: String, value: Float, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "%.1f°".format(abs(value)),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
